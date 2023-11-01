@@ -6,13 +6,18 @@ import {ref} from 'vue';
 import 'leaflet/dist/leaflet.css';
 import L, {Map} from 'leaflet';
 // 全屏插件 https://github.com/Leaflet/Leaflet.fullscreen
-import '../../src/assets/FullScreen/Leaflet.fullscreen.min.js'
-import '../../src/assets/FullScreen/leaflet.fullscreen.css';
+import 'leaflet.fullscreen';
+import 'leaflet.fullscreen/Control.FullScreen.css';
+// 聚合点 官网插件搜索关键词 leaflet.markercluster https://github.com/Leaflet/Leaflet.markercluster
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
 // 默认图标
 import myIconUrl from '../assets/vue.svg';
 
 export function useLeafletMap() {
   const map = ref<Map | null>(null); // 地图实例
+  const mouseLatLng = ref<{ lat: number, lng: number }>({lat: 22, lng: 110});
   const baseLayers = ref<any>({}); // 存储图层数据
   const selectedLayer = ref<string>('天地图街道'); // 选中的图层
 
@@ -24,7 +29,7 @@ export function useLeafletMap() {
     maxZoom: 18,
     minZoom: 3,
     preferCanvas: true,
-    attributionControl: false,
+    attributionControl: true,
     zoomControl: false,
     fullscreenControl: false
   }
@@ -35,7 +40,10 @@ export function useLeafletMap() {
     iconAnchor: [10, 2],
   }
 
-  // 初始化地图
+  /** 初始化地图
+   * @param mapId
+   * @param mapOptions
+   */
   function _initializeMap(mapId: string, mapOptions: any) {
     const allOptions = Object.assign({}, initMapOptions, mapOptions);
     const {
@@ -71,7 +79,7 @@ export function useLeafletMap() {
       ]),
       '谷歌街道': L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=zh-CN&gl=CN&x={x}&y={y}&z={z}&s=Galil&scale=2'),
       '谷歌卫星': L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=zh-CN&gl=CN&x={x}&y={y}&z={z}&s=Galil&scale=2'),
-      '谷歌地形': L.tileLayer('http://mt0.google.com/vt/lyrs=p&hl=zh-CN&gl=CN&x={x}&y={y}&z={z}&s=Galil&scale=2'),
+      '谷歌地形': L.tileLayer('http://mt0.google.com/vt/lyrs=p&hl=zh-CN&gl=CN&x={x}&y={y}&z={z}&s=Galil&scale=2')
     };
     const initialMap = L.map(mapId, {
       center: [lat, lng],
@@ -85,9 +93,24 @@ export function useLeafletMap() {
     });
     baseLayers.value[selectedLayer.value].addTo(initialMap);
     map.value = initialMap;
+    // 开启鼠标经纬度监听
+    _getMouseLatLng();
   }
 
-  // 切换图层
+  /** 添加鼠标移动事件监听器
+   * 监听得到鼠标经纬度
+   */
+  function _getMouseLatLng() {
+    if (!map.value) return;
+    map.value.on('mousemove', (e) => {
+      // 将经纬度保存到当前经纬度
+      mouseLatLng.value = e.latlng;
+    });
+  }
+
+  /** 切换图层
+   * @param layerName 图层名称
+   */
   function _changeLayer(layerName: string) {
     if (!map.value || !baseLayers.value[layerName]) {
       return;
@@ -100,28 +123,76 @@ export function useLeafletMap() {
     baseLayers.value[selectedLayer.value].addTo(map.value);
   }
 
-  // 全屏
+  /** 全屏
+   * 切换全屏
+   */
   function _fullScreen() {
+    if (!map.value) return;
     //全屏切换
     map.value.toggleFullscreen();
   }
 
-  // 绘制点
-  function _makeIcon(latlng: number[] = [23.505, 113.57], showWord: string = '<p>终端1<br />hello</p>', isOpen: boolean = false, options: any) {
-    const allOptions = Object.assign({}, iconOptions, options);
-    const myIcon = L.icon(allOptions);
-    const marker = L.marker(latlng, {icon: myIcon}).addTo(map.value);
-    // 默认关闭显示话语 自行点击展开
-    if (!isOpen) {
-      marker.bindPopup(showWord).closePopup();
-    } else {
-      marker.bindPopup(showWord).openPopup();
+  /** 绘制多个点并添加到图层
+   * @param points  绘制多点数组
+   * @param layerName 图层名称
+   * @param options 绘制图层基本配置项
+   */
+  function _renderPoints(points: Array<{
+    lat: number;
+    lng: number;
+    showMsg: string
+  }>, layerName: string, options: any) {
+    if (!map.value || !Array.isArray(points) || points.length === 0) return;
+    // 定义一个图层
+    let myCustomLayer = L.layerGroup();
+    const alloptions = {...iconOptions, ...options};
+    points.forEach(point => {
+      const {lat, lng, showMsg} = point;
+      const marker = L.marker([lat, lng], {...alloptions}).addTo(myCustomLayer);
+      marker.bindPopup(showMsg);
+    });
+    // 将图层添加到地图，并使用 layerName 作为图层标识
+    myCustomLayer.addTo(map.value);
+    baseLayers.value[layerName] = myCustomLayer;
+  }
+
+  /** 通过名称清除指定图层
+   * @param layerName 要清除的图层名称
+   */
+  function _clearLayer(layerName: string) {
+    if (!map.value) return;
+    if (baseLayers.value[layerName]) {
+      map.value.removeLayer(baseLayers.value[layerName]);
+      delete baseLayers.value[layerName];
     }
   }
 
-  //地图以某个点居中
-  function _setView(latlng: number[] = [23.505, 113.57]) {
+  /**地图以某个点居中
+   * @param latlng 【经度，纬度】
+   */
+  function _setInCenter(latlng: number[] = [23.505, 113.57]) {
+    if (!map.value) return;
     map.value.setView(latlng);
+  }
+
+  /** 地图以某群经纬度显示在地图视线范围内
+   * @param areaData  经纬度点 eg:[{lat:'',lng:''},{lat:'',lng:''}]
+   * @param options  基本配置项
+   */
+  function _setInBounds(areaData: any, options = {padding: [10, 10], maxZoom: 17}) {
+    if (!map.value) return;
+    const fitData = []
+    for (let item of areaData) {
+      //兼容数组与对象型
+      if (!Array.isArray(item)) {
+        fitData.push([item.lat, item.lng])
+      } else {
+        for (let p of item) {
+          fitData.push([p.lat, p.lng])
+        }
+      }
+    }
+    map.value.fitBounds(fitData, options);
   }
 
 
@@ -133,7 +204,10 @@ export function useLeafletMap() {
     selectedLayer,
     _changeLayer,
     _fullScreen,
-    _makeIcon,
-    _setView
+    _renderPoints,
+    _clearLayer,
+    _setInCenter,
+    _setInBounds,
+    _getMouseLatLng
   };
 }

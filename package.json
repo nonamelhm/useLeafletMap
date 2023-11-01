@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "leaflet.fullscreen": "^3.0.0",
+    "leaflet.markercluster": "^1.5.3",
     "vue": "^3.3.4"
   },
   "devDependencies": {
