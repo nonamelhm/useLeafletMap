@@ -11,7 +11,6 @@ import 'leaflet.fullscreen/Control.FullScreen.css';
 // 聚合点 官网插件搜索关键词 leaflet.markercluster https://github.com/Leaflet/Leaflet.markercluster
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.css";
 // 默认图标
 import myIconUrl from '../assets/vue.svg';
 
@@ -145,10 +144,12 @@ export function useLeafletMap() {
     if (!map.value || !Array.isArray(points) || points.length === 0) return;
     // 定义一个图层
     let myCustomLayer = L.layerGroup();
-    const alloptions = {...iconOptions, ...options};
+    const allOptions = {...iconOptions, ...options};
+    // 自定义图标
+    let myIcon = L.icon(allOptions);
     points.forEach(point => {
       const {lat, lng, showMsg} = point;
-      const marker = L.marker([lat, lng], {...alloptions}).addTo(myCustomLayer);
+      const marker = L.marker([lat, lng], {icon: myIcon}).addTo(myCustomLayer);
       marker.bindPopup(showMsg);
     });
     // 将图层添加到地图，并使用 layerName 作为图层标识
@@ -195,17 +196,83 @@ export function useLeafletMap() {
     map.value.fitBounds(fitData, options);
   }
 
+  /** 绘制多数据 圆形 矩形 正方形
+   * @param data  绘制图形及其坐标点
+   * @param layerName 图层名称
+   * @param options  基本配置项
+   */
+  function _drawByData(data:any, layerName:string='patternLayers',options:any) {
+    if (!map.value) return;
+    if (!baseLayers.value[layerName]) {
+      baseLayers.value[layerName] = L.layerGroup().addTo(map.value);
+    }
+    // 所有经纬度 为了放大适应
+    let allLatlngs:{lat:number,lng:number}[] = [];
+    data.forEach((shapeData) => {
+      let shapeLayer;
+      if (shapeData.type === 'circle') {
+        const { lat, lng, radius, info } = shapeData;
+        allLatlngs.push({lat, lng});
+        const circleLatLng = [lat, lng];
+        const circleOptions = {
+          ...options,
+          info: info,
+        };
+        shapeLayer = L.circle(circleLatLng, { radius, ...circleOptions }).bindPopup(info);
+      } else if (shapeData.type === 'rectangle' || shapeData.type === 'polygon') {
+        const latlngs = shapeData.coordinates.map((coord:{lat:number,lng:number}) => [coord.lat, coord.lng]);
+        const shapeOptions = {
+          ...options,
+          info: shapeData.info,
+        };
+        allLatlngs.push(...shapeData.coordinates);
+        if (shapeData.type === 'rectangle') {
+          shapeLayer = L.rectangle(latlngs, shapeOptions).bindPopup(shapeData.info);
+        } else if (shapeData.type === 'polygon') {
+          shapeLayer = L.polygon(latlngs, shapeOptions).bindPopup(shapeData.info);
+        }
+      }
+
+      if (shapeLayer) {
+        shapeLayer.addTo(baseLayers.value[layerName]);
+      }
+    });
+    // 使得绘制范围在地图内
+    if(allLatlngs.length){
+      _setInBounds(allLatlngs);
+    }
+  }
+
+
+  /** 地图以某群经纬度显示在地图视线范围内
+   * 变大一倍
+   */
+  function _setZoomBigger() {
+    map.value.zoomIn(1);
+  }
+
+  /** 地图以某群经纬度显示在地图视线范围内
+   * 缩小一倍
+   */
+  function _setZoomSmaller() {
+    map.value.zoomOut(1);
+  }
+
 
   // 返回可导出的方法和数据
   return {
     map,
-    _initializeMap,
+    mouseLatLng,
     baseLayers,
     selectedLayer,
+    _initializeMap,
     _changeLayer,
     _fullScreen,
     _renderPoints,
     _clearLayer,
+    _setZoomBigger,
+    _setZoomSmaller,
+    _drawByData,
     _setInCenter,
     _setInBounds,
     _getMouseLatLng
