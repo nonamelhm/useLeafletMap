@@ -10,11 +10,17 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "leaflet-measure": "^3.1.0",
+    "leaflet-semicircle": "^2.0.4",
     "leaflet.fullscreen": "^3.0.0",
+    "leaflet.heat": "^0.2.0",
     "leaflet.markercluster": "^1.5.3",
+    "leaflet.pm": "^2.2.0",
+    "leaflet.polylinemeasure": "^3.0.0",
     "vue": "^3.3.4"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.8",
     "@vitejs/plugin-vue": "^4.2.3",
     "typescript": "^5.0.2",
     "vite": "^4.4.5",

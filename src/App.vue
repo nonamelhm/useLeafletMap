@@ -1,60 +1,51 @@
-<template>
-  <div id="app">
-    <!-- 在模板中创建一个容器用于地图 -->
-    <div id="mapContainer" style="height: 500px;width:500px;"></div>
-
-    <!-- 添加按钮来切换地图图层 -->
-    <button @click="_changeLayer('空白')">切换到空白地图</button>
-    <button @click="_changeLayer('天地图街道')">切换到天地图街道</button>
-    <button @click="_changeLayer('天地图卫星')">切换到天地图卫星</button>
-    <button @click="_changeLayer('天地图地形')">切换到天地图地形</button>
-    <button @click="_changeLayer('谷歌卫星')">切换谷歌卫星</button>
-    <button @click="_changeLayer('谷歌街道')">切换谷歌街道</button>
-    <button @click="_changeLayer('谷歌地形')">切换谷歌地形</button>
-    <button @click="_fullScreen()">全屏</button>
-    <button @click="drawPoint">测试绘制点或聚合点</button>
-    <button @click="clearLayer('layers1')">清除图层1</button>
-    <button @click="_setZoomSmaller">缩小</button>
-    <button @click="_setZoomBigger">放大</button>
-    <button @click="drawShapes">绘制图形</button>
-    <button @click="_clearLayer('layers3')">清除图形</button>
-
-    <!-- 添加更多按钮来切换其他地图图层 -->
-
-  </div>
-</template>
-
 <script lang="ts" setup>
 import myIconUrl from '../src/assets/vue.svg';
-import {nextTick, onMounted} from 'vue';
+import {nextTick, onMounted, ref} from 'vue';
 import {useLeafletMap} from './utils/useLeafletMap.ts'; // 请根据你的文件路径正确导入
 const {
-  _initializeMap,
+  _initMap,
   _changeLayer,
   _fullScreen,
-  _renderPoints,
+  _renderPoint,
   _clearLayer,
   _setZoomSmaller,
   _setZoomBigger,
-  _drawByData
+  _drawByData,
+  _drawWindCircle,
+  _mearsureDistance,
+  _clearMeasure,
+  _getMeasureUnit,
+  _changeMeasureUnit,
+  _mearsureArea,
+  _drawHeatMap,
+  _editPatternGetData
 } = useLeafletMap();
+const map = ref<any>(null);
 // 在组件加载后初始化地图
 onMounted(() => {
   nextTick(() => {
-    _initializeMap('mapContainer');
+    map.value = _initMap('mapContainer');
   })
 
 })
-const drawPoint=()=>{
-  let list = [{ lat: 24, lng: 110, id: 1, showMsg: `图层1<br/>点1` }, { lat: 22, lng: 110, id: 3, showMsg: `图层1<br/>点2` }];
-  _renderPoints(list, 'layers1', {iconUrl: myIconUrl}, true);
-  _renderPoints([{lat: 25, lng: 110, id: 2, showMsg: `图层2<br/>点1`}], 'layers2');
+const drawPoint = () => {
+  let list = [{lat: 24, lng: 110, id: 1, showMsg: `图层1<br/>点1`}, {
+    lat: 22,
+    lng: 110,
+    id: 3,
+    showMsg: `图层1<br/>点2`
+  }];
+  _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true);
+  _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, showMsg: `图层2<br/>点1`}], 'layers2');
 }
+// 测量单位
+const mearsureDistanceUnit = ref<string>('千米');
+
 const clearLayer = (name: string) => {
-  _clearLayer(name);
+  _clearLayer(map.value, name);
 }
 const drawShapes = () => {
-  _drawByData([
+  _drawByData(map.value, [
     {
       type: 'circle',
       lat: 23.505,
@@ -70,24 +61,108 @@ const drawShapes = () => {
       info: 'Circle 2',
     },
     {
+      type: 'line',
+      coordinates: [
+        {lat: 23, lng: 115.6},
+        {lat: 21.7, lng: 112.7},
+      ],
+      info: 'Rectangle 1',
+    },
+    {
       type: 'rectangle',
       coordinates: [
-        { lat: 23.6, lng: 113.6 },
-        { lat: 23.7, lng: 113.7 },
+        {lat: 23.6, lng: 113.6},
+        {lat: 23.7, lng: 113.7},
       ],
       info: 'Rectangle 1',
     },
     {
       type: 'polygon',
       coordinates: [
-        { lat: 23.8, lng: 113.8 },
-        { lat: 23.9, lng: 113.9 },
-        { lat: 24.0, lng: 114.0 },
+        {lat: 23.8, lng: 113.8},
+        {lat: 23.9, lng: 113.9},
+        {lat: 24.0, lng: 114.0},
       ],
       info: 'Polygon 1',
     }
-  ], 'layers3',{ color: 'red' });
-
+  ], 'layers3', {color: 'green', weight: 1});
+}
+const changeMeasureUnit = () => {
+  _changeMeasureUnit(map.value);
+  mearsureDistanceUnit.value = _getMeasureUnit(map.value);
 }
 
+const drawWindCircle = () => {
+  let list = [
+    {lat: 25, lng: 110, seRadius: 200, neRadius: 250, swRadius: 180, nwRadius: 170},
+    {lat: 15, lng: 100, seRadius: 100, neRadius: 220, swRadius: 130, nwRadius: 140}]
+  _drawWindCircle(map.value, list, 'windCircle');
+}
+const clearWindCircle = () => {
+  _clearLayer(map.value, 'windCircle');
+}
+const drawHeatMap = () => {
+  let data = [{
+    lat: 35.460756,
+    lng: 119.59847,
+    count: 1
+  }, {
+    lat: 35.560756,
+    lng: 119.69847,
+    count: 19
+  }, {
+    lat: 34.460756,
+    lng: 109.59847,
+    count: 19
+  }, {
+    lat: 31.560756,
+    lng: 112.69847,
+    count: 100
+  }]
+  _drawHeatMap(map.value, data, 'hot');
+}
+const clearHotMap = () => {
+  _clearLayer(map.value, 'hot')
+}
+const editPattern = (type: string) => {
+  _editPatternGetData(map.value, type);
+}
 </script>
+<template>
+  <div id="app">
+    <!-- 在模板中创建一个容器用于地图 -->
+    <div id="mapContainer" style="height: 500px;width:500px;"></div>
+
+    <!-- 添加按钮来切换地图图层 -->
+    <button @click="_changeLayer(map,'空白')">切换到空白地图</button>
+    <button @click="_changeLayer(map,'天地图街道')">切换到天地图街道</button>
+    <button @click="_changeLayer(map,'天地图卫星')">切换到天地图卫星</button>
+    <button @click="_changeLayer(map,'天地图地形')">切换到天地图地形</button>
+    <button @click="_changeLayer(map,'谷歌卫星')">切换谷歌卫星</button>
+    <button @click="_changeLayer(map,'谷歌街道')">切换谷歌街道</button>
+    <button @click="_changeLayer(map,'谷歌地形')">切换谷歌地形</button>
+    <button @click="_fullScreen(map)">全屏</button>
+    <button @click="drawPoint">测试绘制点或聚合点</button>
+    <button @click="clearLayer(map,'layers1')">清除图层1</button>
+    <button @click="_setZoomSmaller(map)">缩小</button>
+    <button @click="_setZoomBigger(map)">放大</button>
+    <button @click="drawShapes">绘制图形</button>
+    <button @click="_clearLayer(map,'layers3')">清除图形</button>
+    <button @click="_mearsureDistance(map)">测距</button>
+    <button @click="_clearMeasure(map)">清除测距</button>
+    <button @click="changeMeasureUnit()">改变测量单位</button>
+    <span>{{ mearsureDistanceUnit }}</span>
+    <button @click="_mearsureArea(map)">测面积</button>
+    <button @click="drawWindCircle">绘制风圈</button>
+    <button @click="clearWindCircle">清除风圈</button>
+    <button @click="drawHeatMap">绘制热力图</button>
+    <button @click="clearHotMap">清除热力图</button>
+    <button @click="editPattern('Marker')">直接绘制点</button>
+    <button @click="editPattern('Polygon')">直接绘制多边形</button>
+    <button @click="editPattern('Circle')">直接绘制圆形</button>
+    <button @click="editPattern('Rectangle')">直接绘制矩形</button>
+    <!-- 添加更多按钮来切换其他地图图层 -->
+  </div>
+</template>
+
+
