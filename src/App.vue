@@ -40,8 +40,8 @@ const drawPoint = () => {
     dir:135,
     showMsg: `hello2`
   }];
-  _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true);
-  // _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, showMsg: `图层2<br/>点1`}], 'layers2');
+  // _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
+  _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
 }
 // 测量单位
 const mearsureDistanceUnit = ref<string>('千米');

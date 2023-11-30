@@ -2,9 +2,9 @@
  * leaflet绘制地图工具类
  * 官网：https://leafletjs.cn/reference.html
  */
-import {ref, nextTick} from 'vue';
+import {ref} from 'vue';
 import 'leaflet/dist/leaflet.css';
-import L, {Browser} from 'leaflet';
+import * as L from 'leaflet';
 // 测距 https://github.com/ppete2/Leaflet.PolylineMeasure
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.css";
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.js";
@@ -211,7 +211,7 @@ export function useLeafletMap() {
     lng: number;
     dir: number;
     showMsg: string
-  }>, layerName: string, options: any, isCluster: boolean = false) {
+  }>, layerName: string, options: any, isCluster: boolean = false, isShow: boolean = true) {
     if (!map || !Array.isArray(points) || points.length === 0) return;
     let allOptions = Object.assign(pointOptions, options);
     // 确保 baseLayers.value 初始化
@@ -227,8 +227,16 @@ export function useLeafletMap() {
 
     points.forEach(point => {
       const {lat, lng, showMsg, dir} = point;
-      const marker = L.marker([lat, lng], {icon: myIcon, rotationAngle: dir}).addTo(baseLayers.value[layerName]);
-      marker.bindPopup(showMsg);
+      const marker = L.marker([lat, lng], {
+        icon: myIcon,
+        rotationAngle: dir
+      }).bindPopup(showMsg, {closeButton: false,className:'hl-pop-msg-box'}).addTo(baseLayers.value[layerName])
+      if (isShow) {
+        marker.openPopup(); // 自动显示 popup
+      }else{
+        marker.closePopup(); // 自动显示 popup
+      }
+
     });
     // 将图层添加到地图，并使用 layerName 作为图层标识
     baseLayers.value[layerName].addTo(map);
