@@ -2,9 +2,9 @@
  * leaflet绘制地图工具类
  * 官网：https://leafletjs.cn/reference.html
  */
-import {ref} from 'vue';
+import {ref, nextTick} from 'vue';
 import 'leaflet/dist/leaflet.css';
-import * as L from 'leaflet';
+import L, {Browser} from 'leaflet';
 // 测距 https://github.com/ppete2/Leaflet.PolylineMeasure
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.css";
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.js";
@@ -18,8 +18,14 @@ import {selectOne as selectOne} from 'leaflet-measure/src/dom'
 import 'leaflet.fullscreen';
 import 'leaflet.fullscreen/Control.FullScreen.css';
 // 聚合点 官网插件搜索关键词 leaflet.markercluster https://github.com/Leaflet/Leaflet.markercluster
-import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "leaflet.markercluster/dist/leaflet.markercluster.js";
+// 有方向的Marker leaflet-rotatedmarker  https://github.com/bbecquet/Leaflet.RotatedMarker
+import 'leaflet-rotatedmarker';
+// leaflet-canvas-marker Marker  https://www.npmjs.com/package/leaflet-canvas-marker  TODO待成功引入
+import 'leaflet-canvas-marker'
+
 // 默认图标
 import myIconUrl from '../assets/vue.svg';
 // 台风 https://github.com/jieter/Leaflet-semicircle
@@ -30,12 +36,22 @@ import 'leaflet.heat/dist/leaflet-heat.js';
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm';
 
+// 轨迹回放 https://linghuam.github.io/Leaflet.TrackPlayBack/   https://github.com/linghuam/Leaflet.TrackPlayBack
+import 'leaflet-plugin-trackplayback/dist/control.playback.css';
+import 'leaflet-plugin-trackplayback/dist/control.trackplayback.js';
+import 'leaflet-plugin-trackplayback/dist/leaflet.trackplayback.js';
+// import '../assets/js/trackback/control.playback.css';//引入轨迹回放css
+// import '../assets/js/trackback/control.trackplayback';//引入轨迹回放控制
+// import '../assets/js/trackback/leaflet.trackplayback';//引入轨迹回放
+// import '../assets/js/trackback/rastercoords';// 定向地图
+import trackPng from "../assets/images/trackplay-icon.png";
+
 export function useLeafletMap() {
   const map = ref(null); // 地图实例
   const mouseLatLng = ref<{ lat: number, lng: number }>({lat: 22, lng: 110});
   const baseLayers = ref<any>({}); // 存储图层数据
   const selectedLayer = ref<string>('天地图街道'); // 选中的图层
-
+  const trackplayback = ref<any>(null);
   // 地图初始化基本配置
   const initMapOptions = {
     lat: 23.1538555,
@@ -44,9 +60,20 @@ export function useLeafletMap() {
     maxZoom: 18,
     minZoom: 3,
     preferCanvas: true,
-    attributionControl: false,
-    zoomControl: false,
+    attributionControl: true,
+    zoomControl: true,
     fullscreenControl: true
+  }
+  // 绘制点基本配置
+  const pointOptions = {
+    iconUrl: myIconUrl,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    disableClusteringAtZoom: 16,
+    maxClusterRadius: 60
   }
   // 默认绘制台风风圈配置
   const windCircleOptions = {
@@ -182,22 +209,29 @@ export function useLeafletMap() {
   function _renderPoint(map: any, points: Array<{
     lat: number;
     lng: number;
+    dir: number;
     showMsg: string
-  }>, layerName: string, options: any) {
+  }>, layerName: string, options: any, isCluster: boolean = false) {
     if (!map || !Array.isArray(points) || points.length === 0) return;
-    // 定义一个图层
-    let myCustomLayer = L.layerGroup();
-    const allOptions = {...iconOptions, ...options};
+    let allOptions = Object.assign(pointOptions, options);
+    // 确保 baseLayers.value 初始化
+    baseLayers.value = baseLayers.value || {};
+    if (isCluster) {
+      baseLayers.value[layerName] = L.markerClusterGroup(allOptions);
+    } else {
+      baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
+      baseLayers.value[layerName].clearLayers();
+    }
     // 自定义图标
     let myIcon = L.icon(allOptions);
+
     points.forEach(point => {
-      const {lat, lng, showMsg} = point;
-      const marker = L.marker([lat, lng], {icon: myIcon}).addTo(myCustomLayer);
+      const {lat, lng, showMsg, dir} = point;
+      const marker = L.marker([lat, lng], {icon: myIcon, rotationAngle: dir}).addTo(baseLayers.value[layerName]);
       marker.bindPopup(showMsg);
     });
     // 将图层添加到地图，并使用 layerName 作为图层标识
-    myCustomLayer.addTo(map);
-    baseLayers.value[layerName] = myCustomLayer;
+    baseLayers.value[layerName].addTo(map);
   }
 
   /** 通过名称清除指定图层
@@ -570,10 +604,8 @@ export function useLeafletMap() {
   function _editPatternGetData(map: any, shapeType: string = 'Polygon', layerName: string = 'editingLayers', color: string = 'rgba(51, 136, 255, 1)', iconUrl: any) {
     if (!map) return;
     _clearAllEdit(map);
-
     // baseLayers.value 初始化
     baseLayers.value = baseLayers.value || {};
-
     // 使用自定义图层名称
     baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
     baseLayers.value[layerName].clearLayers();
@@ -655,6 +687,68 @@ export function useLeafletMap() {
     map.zoomOut(1);
   }
 
+  function _trackPlay(map: any, data: any) {
+    if (!map) return;
+    const Options = {
+      trackLineOptions: {
+        isDraw: true, // 是否画线
+        stroke: true,
+        color: '#03ff09', // 线条颜色
+        weight: 2, // 线条宽度
+        opacity: 1, // 透明度
+        wakeTimeDiff: 100// 尾迹时间控制 不传默认一年
+      },
+      targetOptions: {
+        useImg: true,
+        weight: 1,
+        useImg: true,
+        color: '#03ff09',
+        imgUrl: trackPng,
+        iconSize: [30, 30],
+        iconAnchor: [10, 2],
+        width: 40,
+        height: 40,
+        unit: `km/h`,
+        replayType: false, // false 多个回放 true 单个回放
+        isDir: 1,// 通用图标才有方向变化
+        wakeTimeDiff: 100,
+        isDrawLine: false,
+        showDistance: false,
+        distanceMarkers: {
+          unit: 'km',
+          showAll: 14,
+          isReverse: false,
+          offset: 10000,
+          cssClass: 'hl-line',
+          iconSize: [20, 20]
+        },
+        opacity: 1
+      }
+    }
+    const trackplayback = L.trackplayback(data, map, Options);
+    console.log('trackplayback:', trackplayback);
+    const trackplaybackControl = L.trackplaybackcontrol(trackplayback);
+    console.log('trackplaybackControl:', trackplaybackControl);
+    // 确保 map._container 可用
+    if (!map._container) {
+      console.error('Map container is not available.');
+      return;
+    }
+    trackplaybackControl.addTo(map);
+    console.log('return');
+    console.log(trackplayback);
+    return trackplayback
+  }
+
+
+  // 开始播放
+  function _startTrack(trackplay: any) {
+    if (!trackplay) {
+      return;
+    }
+    console.log(trackplay);
+    trackplay.start();
+  }
 
   // 返回可导出的方法和数据
   return {
@@ -664,6 +758,7 @@ export function useLeafletMap() {
     selectedLayer,
     drawLatlngs,
     drawCircleRadius,
+    trackplayback,
     _initMap,
     _changeLayer,
     _fullScreen,
@@ -684,6 +779,8 @@ export function useLeafletMap() {
     _getMouseLatLng,
     _initMearsureDistance,
     _drawWindCircle,
-    _mearsureArea
+    _trackPlay,
+    _mearsureArea,
+    _startTrack
   };
 }

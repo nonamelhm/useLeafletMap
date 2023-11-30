@@ -1,13 +1,15 @@
 <script lang="ts" setup>
 import myIconUrl from '../src/assets/vue.svg';
-import {nextTick, onMounted, ref} from 'vue';
+import {nextTick, onMounted, ref, watch} from 'vue';
 import {useLeafletMap} from './utils/useLeafletMap.ts'; // 请根据你的文件路径正确导入
 const {
+  trackplayback,
   _initMap,
   _changeLayer,
   _fullScreen,
   _renderPoint,
   _clearLayer,
+  _clearAllEdit,
   _setZoomSmaller,
   _setZoomBigger,
   _drawByData,
@@ -18,25 +20,28 @@ const {
   _changeMeasureUnit,
   _mearsureArea,
   _drawHeatMap,
-  _editPatternGetData
+  _editPatternGetData,
+  _trackPlay,
+  _startTrack
 } = useLeafletMap();
 const map = ref<any>(null);
 // 在组件加载后初始化地图
 onMounted(() => {
   nextTick(() => {
     map.value = _initMap('mapContainer');
+    console.log('地图初始化完成', map.value);
   })
-
 })
 const drawPoint = () => {
-  let list = [{lat: 24, lng: 110, id: 1, showMsg: `图层1<br/>点1`}, {
+  let list = [{lat: 24, lng: 110, id: 1,dir:50, showMsg: `hello1`}, {
     lat: 22,
     lng: 110,
     id: 3,
-    showMsg: `图层1<br/>点2`
+    dir:135,
+    showMsg: `hello2`
   }];
   _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true);
-  _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, showMsg: `图层2<br/>点1`}], 'layers2');
+  // _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, showMsg: `图层2<br/>点1`}], 'layers2');
 }
 // 测量单位
 const mearsureDistanceUnit = ref<string>('千米');
@@ -127,6 +132,24 @@ const clearHotMap = () => {
 const editPattern = (type: string) => {
   _editPatternGetData(map.value, type);
 }
+let track = ref<any>(null);
+const tracePlay = () => {
+  const data = [[{lat: 23, lng: 133, time: 1676458023, dir: 320, info: []}], [{
+    lat: 33,
+    lng: 112,
+    time: 1676459023,
+    dir: 320,
+    info: []
+  }]]
+  track.value = _trackPlay(map.value, data)
+}
+watch(() => track.value, () => {
+  console.log('bianhua');
+  console.log(track.value);
+  _startTrack(track.value);
+})
+
+
 </script>
 <template>
   <div id="app">
@@ -161,6 +184,10 @@ const editPattern = (type: string) => {
     <button @click="editPattern('Polygon')">直接绘制多边形</button>
     <button @click="editPattern('Circle')">直接绘制圆形</button>
     <button @click="editPattern('Rectangle')">直接绘制矩形</button>
+    <button @click="_clearAllEdit">清除正在绘制</button>
+    <button @click="_clearLayer(map,'editingLayers')">清除正在绘制图层</button>
+    <button @click="tracePlay">轨迹回放</button>
+    <button @click="start">开始回放</button>
     <!-- 添加更多按钮来切换其他地图图层 -->
   </div>
 </template>
