@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import myIconUrl from '../src/assets/vue.svg';
 import {nextTick, onMounted, ref, watch} from 'vue';
-import {useLeafletMap} from './utils/useLeafletMap.ts'; // 请根据你的文件路径正确导入
+import {useLeafletMap} from './utils/useLeafletMap.ts';
+import {control} from "leaflet";
+import layers = control.layers; // 请根据你的文件路径正确导入
 const {
   trackplayback,
   _initMap,
   _changeLayer,
   _fullScreen,
   _renderPoint,
+  _editLayer,
   _clearLayer,
   _clearAllEdit,
   _setZoomSmaller,
@@ -55,7 +58,7 @@ const drawShapes = () => {
       type: 'circle',
       lat: 23.505,
       lng: 113.57,
-      radius: 1000,
+      radius: 10000,
       info: 'Circle 1',
     },
     {
@@ -91,6 +94,7 @@ const drawShapes = () => {
       info: 'Polygon 1',
     }
   ], 'layers3', {color: 'green', weight: 1});
+  // _editLayer(map.value, 'layers3');
 }
 const changeMeasureUnit = () => {
   _changeMeasureUnit(map.value);

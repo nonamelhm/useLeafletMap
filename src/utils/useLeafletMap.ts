@@ -283,9 +283,10 @@ export function useLeafletMap() {
    * @param {object} map - 绘制的地图
    * @param {array} data - 绘制图形及其坐标点
    * @param {string} layerName - 图层名称
+   * @param {boolean} isEdit - 是否开启编辑功能
    * @param {object} options - 基本配置项
    */
-  function _drawByData(map: any, data: any, layerName: string = 'patternLayers', options: any) {
+  function _drawByData(map: any, data: any, layerName: string = 'patternLayers', isEdit: boolean = false, options: any) {
     if (!map || !Array.isArray(data)) return;
 
     // 确保 baseLayers.value 初始化
@@ -304,17 +305,53 @@ export function useLeafletMap() {
 
     data.forEach((shapeData) => {
       const {type, coordinates, info} = shapeData;
-      const constructor = shapeTypeToConstructor[type];
-      if (constructor && coordinates?.length) {
-        const latlngs = coordinates.map(({lat, lng}) => [lat, lng]);
-        const shapeLayer = constructor(latlngs, {...options, info}).bindPopup(info);
-        shapeLayer.addTo(baseLayers.value[layerName]);
-        allLatlngs.push(...coordinates);
+      if (type === 'circle') {
+        // 处理圆形
+        const {lat, lng, radius} = shapeData;
+        const circleLayer = L.circle([lat, lng], {radius}).bindPopup(info);
+        circleLayer.addTo(baseLayers.value[layerName]);
+        allLatlngs.push([lat, lng]);
+        if (isEdit) {
+          circleLayer.pm.enable();
+          // 处理圆形编辑事件
+          circleLayer.on('pm:edit', (e) => {
+            console.log('编辑');
+            console.log(e.sourceTarget._latlng);
+            drawList.value = e.sourceTarget._latlng;
+            baseLayers.value[layerName].addLayer(drawList.value);
+            map.addLayer(baseLayers.value[layerName]);
+            // 处理圆形编辑事件
+            drawLatlngs.value = e.sourceTarget._latlng;
+            drawCircleRadius.value = e.sourceTarget._mRadius;
+          });
+        }
+      } else {
+        const constructor = shapeTypeToConstructor[type];
+        let latlngs;
+        let shapeLayer;
+        if (constructor && coordinates?.length) {
+          latlngs = coordinates.map(({lat, lng}) => [lat, lng]);
+          shapeLayer = constructor(latlngs, {...options, info}).bindPopup(info);
+          shapeLayer.addTo(baseLayers.value[layerName]);
+          allLatlngs.push(...coordinates);
+          if (isEdit) {
+            shapeLayer.pm.enable();
+            shapeLayer.on('pm:edit', e => {
+              console.log('编辑2');
+              console.log(e.sourceTarget);
+              drawList.value = e.layer;
+              baseLayers.value[layerName].addLayer(drawList.value);
+              map.addLayer(baseLayers.value[layerName]);
+              drawLatlngs.value = e.sourceTarget._latlngs
+            });
+          }
+        }
       }
     });
     if (allLatlngs.length) {
       _setInBounds(map, allLatlngs);
     }
+
   }
 
   /** 测量距离 初始化
