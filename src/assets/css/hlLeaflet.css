@@ -1,0 +1,40 @@
+.hl-track-point-box{
+  font-size: 14px;
+  padding: 5px 20px;
+  color: #323232;
+}
+
+.leaflet-marker-icon.leaflet-div-icon {
+  border: 0px;
+}
+.leaflet-marker-icon.leaflet-div-icon b{
+  color: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  display: block;
+  transform: translate3d(-50%, -50%, 0);
+  text-align: center;
+  line-height: 30px;
+}
+
+.leaflet-marker-icon.leaflet-div-icon .red {
+  background-image: radial-gradient(#fc4a14, #fc4a1499, #fc4a1466, #fc4a1433, #fc4a1400);
+}
+
+.leaflet-marker-icon.leaflet-div-icon .blue2 {
+  background-image: radial-gradient(#0a4580, #0a458099, #0a458066, #0a458033, #0a458000);
+}
+
+.leaflet-marker-icon.leaflet-div-icon .blue {
+  background-image: radial-gradient(#1488fc, #1488fc99, #1488fc66, #1488fc33, #1488fc00);
+}
+
+.leaflet-marker-icon.leaflet-div-icon .green2 {
+  background-image: radial-gradient(#5aa60d, #5aa60d99, #5aa60d66, #5aa60d99, #5aa60d00);
+}
+
+.leaflet-marker-icon.leaflet-div-icon .green {
+  background-image: radial-gradient(#90ff20, #90ff2099, #90ff2066, #90ff2033, #90ff2000);
+}
+

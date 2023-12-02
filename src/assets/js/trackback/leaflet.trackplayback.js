@@ -1,4 +1,4 @@
-// import { transformTime } from '../../../utils/util';
+import { transformTime } from '../../../utils/util';
 !(function (t, i) {
   if ('object' == typeof exports && 'object' == typeof module)
     module.exports = i(require('leaflet'))
@@ -465,7 +465,7 @@
           },
 
           _drawTrack: function (t) {
-            this._showTrackLine && this._drawTrackLine(t);//是否画线
+            this._showTrackLine && this._drawTrackLine(t); 
             let i = t[t.length - 1];
             if (t[t.length - 2]) {
               this.currentPlaySpeed = t[t.length - 2].speed
@@ -475,8 +475,7 @@
               this.currentPlayGps = t[t.length - 2].gps
               this.currentPlayHeight = t[t.length - 2].height
               this.currentPlayDistant = t[t.length - 2].distant
-              this.currentPlayTime = t[t.length - 2].time * 1000
-              // this.currentPlayTime = transformTime(t[t.length - 2].time * 1000).substr(0, 16)
+              this.currentPlayTime = transformTime(t[t.length - 2].time * 1000).substr(0, 16)
             } else {
               this.currentPlaySpeed = 0
               this.currentPlayPower = 0
@@ -563,8 +562,6 @@
               this._ctx.restore()
           },
           _drawShipImage: function (t, b, speed, power, gsm, gps, height, isDir, time) {
-
-            // console.log(time)
             this.getCurrentPlaySpeed = speed
             this.getCurrentPlayPower = power
             this.getCurrentPlayGsm = gsm
@@ -644,8 +641,8 @@
               this._ctx.translate(i.x, i.y);
             if (isDir) {
               this._ctx.rotate(Math.PI / 180 * e)
-            }
-            this._ctx.drawImage(image, 0 - r, 0 - a, s, n),
+            }    
+            this._ctx.drawImage(this._targetImg, 0 - r, 0 - a, s, n),
               this._ctx.restore()
           },
           _getTooltipText: function (t) {

@@ -25,14 +25,19 @@ const {
   _drawHeatMap,
   _editPatternGetData,
   _trackPlay,
-  _startTrack
+  _startTrack,
+  _stopTrack,
+  _restartTrack,
+  _setTrackCurentTime,
+  _setTrackSpeed,
+  _disposeTrack
 } = useLeafletMap();
 const map = ref<any>(null);
+let testMap = null
 // 在组件加载后初始化地图
 onMounted(() => {
   nextTick(() => {
-    map.value = _initMap('mapContainer');
-    console.log('地图初始化完成', map.value);
+    map.value =  _initMap('mapContainer');
   })
 })
 const drawPoint = () => {
@@ -43,7 +48,7 @@ const drawPoint = () => {
     dir:135,
     showMsg: `hello2`
   }];
-  // _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
+  _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
   _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
 }
 // 测量单位
@@ -136,24 +141,49 @@ const clearHotMap = () => {
 const editPattern = (type: string) => {
   _editPatternGetData(map.value, type);
 }
-let track = ref<any>(null);
+const track = ref<any>(null);
 const tracePlay = () => {
-  const data = [[{lat: 23, lng: 133, time: 1676458023, dir: 320, info: []}], [{
-    lat: 33,
-    lng: 112,
-    time: 1676459023,
-    dir: 320,
-    info: []
-  }]]
-  track.value = _trackPlay(map.value, data)
+  // const data = [[{lat: 23, lng: 133, time: 1676458023, dir: 320, info: []}], [{
+  //   lat: 33,
+  //   lng: 112,
+  //   time: 1676459023,
+  //   dir: 320,
+  //   info: []
+  // }]]
+  // track.value = _trackPlay(testMap, data)
+  let testData = [
+            [
+              { "lng": 133.78486666666666, "lat": 34.34605, "time": 1676458023, "speed": 122, "dir": 61.8, "heading": 62, "point": 1, "info": [], gDeviceStatus: 3 },
+              { "lng": 134.98611666666667, "lat": 33.88173333333334, "speed": 124, "point": 3, "time": 1676459023, "dir": 142.7, "heading": 139, "info": [], gDeviceStatus: 4 }
+            ],
+            [
+              { "lng": 130.78486666666666, "lat": 31.34605, "time": 1676458023, "speed": 132, "dir": 61.8, "heading": 62, "point": 1, "info": [], gDeviceStatus: 3 },
+              { "lng": 136.98611666666667, "lat": 32.88173333333334, "speed": 134, "point": 3, "time": 1676459023, "dir": 142.7, "heading": 139, "info": [], gDeviceStatus: 4 }
+            ]
+          ]
+          track.value = _trackPlay(map.value, testData,'trackplay',{ isDrawLine: false });
 }
-watch(() => track.value, () => {
-  console.log('bianhua');
-  console.log(track.value);
-  _startTrack(track.value);
-})
+const start=()=>{
+  _startTrack(track.value)
+}
 
-
+const stop=()=>{
+  _stopTrack(track.value)
+}
+const refresh=()=>{
+  _restartTrack(track.value)
+}
+const setSpeed=()=>{
+  _setTrackSpeed(track.value,10)
+}
+const setTime=()=>{
+  _setTrackCurentTime(track.value,1676458088)
+}
+const clearTrack = ()=>{
+  _disposeTrack(track.value)
+  _clearLayer(map.value,'trackplay')
+  
+}
 </script>
 <template>
   <div id="app">
@@ -192,6 +222,11 @@ watch(() => track.value, () => {
     <button @click="_clearLayer(map,'editingLayers')">清除正在绘制图层</button>
     <button @click="tracePlay">轨迹回放</button>
     <button @click="start">开始回放</button>
+    <button @click="stop">停止回放</button>
+    <button @click="setSpeed">设置速度为10</button>
+    <button @click="setTime">设置播放时间</button>
+    <button @click="refresh">刷新轨迹回放</button>
+    <button @click="clearTrack">清除轨迹回放</button>
     <!-- 添加更多按钮来切换其他地图图层 -->
   </div>
 </template>

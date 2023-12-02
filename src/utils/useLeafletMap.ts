@@ -4,10 +4,13 @@
  */
 import {ref} from 'vue';
 import 'leaflet/dist/leaflet.css';
+import '../assets/css/hlLeaflet.css';// 自定义样式 聚合点测、面积
 import * as L from 'leaflet';
 // 测距 https://github.com/ppete2/Leaflet.PolylineMeasure
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.css";
-import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.js";
+// import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.js";
+// TODO 解决测距单位错乱问题
+import "../assets/js/Leaflet.PolylineMeasure.js";
 // 侧面积 https://github.com/ljagis/leaflet-measure
 import 'leaflet-measure/dist/leaflet-measure.css';
 import 'leaflet-measure/dist/leaflet-measure.cn';
@@ -24,7 +27,7 @@ import "leaflet.markercluster/dist/leaflet.markercluster.js";
 // 有方向的Marker leaflet-rotatedmarker  https://github.com/bbecquet/Leaflet.RotatedMarker
 import 'leaflet-rotatedmarker';
 // leaflet-canvas-marker Marker  https://www.npmjs.com/package/leaflet-canvas-marker  TODO待成功引入
-import 'leaflet-canvas-marker'
+import 'leaflet-canvas-marker';
 
 // 默认图标
 import myIconUrl from '../assets/vue.svg';
@@ -37,14 +40,31 @@ import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm';
 
 // 轨迹回放 https://linghuam.github.io/Leaflet.TrackPlayBack/   https://github.com/linghuam/Leaflet.TrackPlayBack
-import 'leaflet-plugin-trackplayback/dist/control.playback.css';
-import 'leaflet-plugin-trackplayback/dist/control.trackplayback.js';
-import 'leaflet-plugin-trackplayback/dist/leaflet.trackplayback.js';
-// import '../assets/js/trackback/control.playback.css';//引入轨迹回放css
-// import '../assets/js/trackback/control.trackplayback';//引入轨迹回放控制
-// import '../assets/js/trackback/leaflet.trackplayback';//引入轨迹回放
-// import '../assets/js/trackback/rastercoords';// 定向地图
-import trackPng from "../assets/images/trackplay-icon.png";
+// import 'leaflet-plugin-trackplayback/dist/control.playback.css';
+// import 'leaflet-plugin-trackplayback/dist/control.trackplayback.js';
+// import 'leaflet-plugin-trackplayback/dist/leaflet.trackplayback.js';
+// TODO 运动时候绘制canvas添加内容UI
+import '../assets/js/trackback/control.playback.css';//引入轨迹回放css
+import '../assets/js/trackback/control.trackplayback.js';//引入轨迹回放控制
+import '../assets/js/trackback/leaflet.trackplayback.js';//引入轨迹回放
+import '../assets/js/trackback/rastercoords';// 定向地图
+import dayjs from 'dayjs';
+import { latLonTransform } from '../utils/util';
+import trackPng from "../assets/images/leaflet_icon/trackplay-icon.png";
+import qidian from '../assets/images/leaflet_icon/tab_state_qidian.png';// 起点 3
+import tingzhi from '../assets/images/leaflet_icon/tab_state_tingzhi.png'; // 停止点 2
+import zhongdian from '../assets/images/leaflet_icon/tab_state_zhongdian.png'; // 终点 4
+import lixian from '../assets/images/leaflet_icon/tab_state_lixian.png'; // 离线 5
+import sos from '../assets/images/leaflet_icon/tab_state_sos.png'; // SOS 6
+import duandian from '../assets/images/leaflet_icon/tab_state_duandian.png'; // 断电 7
+import chaixie from '../assets/images/leaflet_icon/tab_state_chaixie.png'; // 拆卸 8
+import jinru from '../assets/images/leaflet_icon/tab_state_jinru.png'; // 进入围栏 9
+import likai from '../assets/images/leaflet_icon/tab_state_likai.png'; // 离开围栏 10
+import sudu from '../assets/images/leaflet_icon/tab_state_sudu.png'; // 超速 11
+import didianliang from '../assets/images/leaflet_icon/tab_state_didianliang.png'; // 低电量 12
+import shangsheng from '../assets/images/leaflet_icon/tab_state_shangsheng.png'; // 高度上升 13
+import xiajiang from '../assets/images/leaflet_icon/tab_state_xiajiang.png'; // 高度下降 14
+import haiba from '../assets/images/leaflet_icon/tab_state_haiba.png' // 海拔 15
 
 export function useLeafletMap() {
   const map = ref(null); // 地图实例
@@ -73,7 +93,12 @@ export function useLeafletMap() {
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     disableClusteringAtZoom: 16,
-    maxClusterRadius: 60
+    maxClusterRadius: 60,
+    iconCreateFunction: function (cluster:any) {
+      let tempcount = cluster.getChildCount()
+      let tempclass = tempcount > 500 ? 'red' : tempcount > 200 ? 'blue2' : tempcount > 100 ? 'blue' : tempcount > 50 ? 'green2' : 'green'
+      return L.divIcon({ html: '<b class="' + tempclass + '">' + cluster.getChildCount() + '</b>' });
+    }
   }
   // 默认绘制台风风圈配置
   const windCircleOptions = {
@@ -83,18 +108,39 @@ export function useLeafletMap() {
     startAngle: 0,  //0是Y轴 顺时针转算度数
     stopAngle: 360
   }
+
+  // 轨迹回放配置
+  const trackplayOptions = {
+    weight: 1,
+    useImg: true,
+    color: '#03ff09',
+    imgUrl: trackPng,
+    iconSize: [25, 25],
+    iconAnchor: [15, 20],
+    width: 40,
+    height: 40,
+    unit: `km/h`,
+    replayType: false, // false 多个回放 true 单个回放
+    isDir: 1,// 通用图标才有方向变化
+    wakeTimeDiff: 100,
+    isDrawLine: false,
+    showDistance: true,
+    distanceMarkers: {
+      unit: 'km',
+      showAll: 14,
+      isReverse: false,
+      offset: 10000,
+      cssClass: 'hl-line',
+      iconSize: [20, 20]
+    },
+    opacity: 1
+  }
   // 直接绘制的图层
   const drawList = ref<any>(null);
   // 直接绘制经纬度数据
   const drawLatlngs = ref<any>(null);
   // 直接绘制圆的半径
   const drawCircleRadius = ref<number>(0);
-  // 绘制图标默认配置
-  const iconOptions = {
-    iconUrl: myIconUrl,
-    iconSize: [20, 20],
-    iconAnchor: [10, 2],
-  }
 
   /** 初始化地图
    * @param mapId
@@ -315,13 +361,11 @@ export function useLeafletMap() {
           circleLayer.pm.enable();
           // 处理圆形编辑事件
           circleLayer.on('pm:edit', (e) => {
-            console.log('编辑');
-            console.log(e.sourceTarget._latlng);
-            drawList.value = e.sourceTarget._latlng;
+            drawList.value = [e.sourceTarget._latlng];
             baseLayers.value[layerName].addLayer(drawList.value);
             map.addLayer(baseLayers.value[layerName]);
             // 处理圆形编辑事件
-            drawLatlngs.value = e.sourceTarget._latlng;
+            drawLatlngs.value = [e.sourceTarget._latlng];
             drawCircleRadius.value = e.sourceTarget._mRadius;
           });
         }
@@ -337,8 +381,6 @@ export function useLeafletMap() {
           if (isEdit) {
             shapeLayer.pm.enable();
             shapeLayer.on('pm:edit', e => {
-              console.log('编辑2');
-              console.log(e.sourceTarget);
               drawList.value = e.layer;
               baseLayers.value[layerName].addLayer(drawList.value);
               map.addLayer(baseLayers.value[layerName]);
@@ -351,7 +393,6 @@ export function useLeafletMap() {
     if (allLatlngs.length) {
       _setInBounds(map, allLatlngs);
     }
-
   }
 
   /** 测量距离 初始化
@@ -360,7 +401,9 @@ export function useLeafletMap() {
   function _initMearsureDistance(map: any) {
     if (!map) return;
     L.control.polylineMeasure({
+      clearMeasurementsOnStop: true,
       unitControlTitle: {
+        // Title texts to show on the Unit Control button
         text: 'Change Units',
         metres: 'metres',
         landmiles: 'land miles',
@@ -369,7 +412,6 @@ export function useLeafletMap() {
       position: 'topleft',
       unit: 'kilometres', //最小单位
       showBearings: true,
-      clearMeasurementsOnStop: false,
       showClearControl: true,
       showUnitControl: true,
       bearingTextIn: '起点',
@@ -654,7 +696,6 @@ export function useLeafletMap() {
     // 使用自定义图层名称
     baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
     baseLayers.value[layerName].clearLayers();
-
     map.on('pm:drawstart', ({workingLayer}) => {
       workingLayer.on('pm:vertexadded', e => {
         drawList.value = e.workingLayer;
@@ -731,69 +772,243 @@ export function useLeafletMap() {
     if (!map) return;
     map.zoomOut(1);
   }
+  /**
+   * 根据状态画出轨迹点及线
+   * @param map 
+   * @param MarkersList 
+   * @param layerName 
+   * @param options 
+   * @returns 
+   */
+  function _drawTrackPoint (map:any, MarkersList:any, layerName:string='trackplay', options:any) {
+    if (!map) {
+      return
+    }
+     // baseLayers.value 初始化
+     baseLayers.value = baseLayers.value || {};
+     // 使用自定义图层名称
+     baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
+      let graphics = []
+      let image
+      let style = {}
+       
+      for (let i = 0; i < MarkersList.length; ++i) {
+        let drawList = {}
+        let info = ''
+        if (MarkersList[i].gDeviceStatus === null || MarkersList[i].gDeviceStatus !== 1) {
+          if (MarkersList[i].gDeviceStatus === 3 || MarkersList[i].gDeviceStatus === 4) { // 起点|终点的文本信息
+            info += "<div class='hl-track-point-box'>" + "纬度：" + (MarkersList[i] && MarkersList[i].lat !== -1 ? latLonTransform(MarkersList[i].lat, 'lat') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "经度：" + (MarkersList[i] && MarkersList[i].lng !== -1 ? latLonTransform(MarkersList[i].lng, 'lon') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "时间：" + (MarkersList[i].time ? dayjs(MarkersList[i].time * 1000).format('YYYY-MM-DD HH:mm:ss') : MarkersList[i].timestamp ? MarkersList[i].timestamp : "未知") + "</div>"
+          } else if (MarkersList[i].gDeviceStatus === 2) { // 停止点的文本信息
+            gc = MarkersList[i].stayPoint.lng, MarkersList[i].stayPoint.lat
+            info += "<div class='hl-track-point-box'>" + "纬度：" + (MarkersList[i].stayPoint && MarkersList[i].stayPoint.lat !== -1 ? latLonTransform(MarkersList[i].stayPoint.lat, 'lat') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "经度：" + (MarkersList[i].stayPoint && MarkersList[i].stayPoint.lng !== -1 ? latLonTransform(MarkersList[i].stayPoint.lng, 'lon') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "停止时间：" + (MarkersList[i].startTime ? MarkersList[i].startTime : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "移动时间：" + (MarkersList[i].endTime ? MarkersList[i].endTime : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "停止时长：" + (MarkersList[i].duration ? MarkersList[i].duration : "未知") + "</div>"
+          } else { // 除起点|终点|停止点以外的文本信息
+            gc = MarkersList[i].stayPoint.lng, MarkersList[i].stayPoint.lat
+            info += "<div class='hl-track-point-box'>" + "纬度：" + (MarkersList[i].stayPoint && MarkersList[i].stayPoint.lat !== -1 ? latLonTransform(MarkersList[i].stayPoint.lat, 'lat') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "经度：" + (MarkersList[i].stayPoint && MarkersList[i].stayPoint.lng !== -1 ? latLonTransform(MarkersList[i].stayPoint.lng, 'lon') : "未知") + "</div>"
+            info += "<div class='hl-track-point-box'>" + "时间：" + (MarkersList[i].time ? dayjs(MarkersList[i].time * 1000
+            ).format('YYYY-MM-DD HH:mm:ss') : MarkersList[i].timestamp ? MarkersList[i].timestamp : "未知") + "</div>"
+          }
+          if (MarkersList[i].gDeviceStatus === 3) { // 起点
+            image = qidian
+          } else if (MarkersList[i].gDeviceStatus === 4) { // 终点
+            image = zhongdian
+          } else if (MarkersList[i].gDeviceStatus === 5) { // 离线
+            image = lixian
+          } else if (MarkersList[i].gDeviceStatus === 6) { // SOS
+            image = sos
+          } else if (MarkersList[i].gDeviceStatus === 7) { // 断电
+            image = duandian
+          } else if (MarkersList[i].gDeviceStatus === 8) { // 拆卸
+            image = chaixie
+          } else if (MarkersList[i].gDeviceStatus === 9) { // 进入围栏
+            image = jinru
+          } else if (MarkersList[i].gDeviceStatus === 10) { // 离开围栏
+            image = likai
+          } else if (MarkersList[i].gDeviceStatus === 11) { // 超速
+            image = sudu
+          } else if (MarkersList[i].gDeviceStatus === 12) { // 低电量
+            image = didianliang
+          } else if (MarkersList[i].gDeviceStatus === 13) { // 高度上升
+            image = shangsheng
+          } else if (MarkersList[i].gDeviceStatus === 14) { // 高度下降
+            image = xiajiang
+          } else if (MarkersList[i].gDeviceStatus === 15) { // 海拔
+            image = haiba
+          } else {
+            image = tingzhi
+          }
 
-  function _trackPlay(map: any, data: any) {
+          let icon = L.icon({
+            iconUrl: image,
+            iconSize: options.iconSize,
+            iconAnchor: options.iconAnchor
+          })
+         drawList = L.marker(L.latLng(MarkersList[i].lat, MarkersList[i].lng), {
+            icon: icon,
+            info
+          }).on('click', function (e) {
+            let info = e.sourceTarget.options.info;
+            if (info) {
+              L.popup({ offset: [0, 0], className: 'hlleaflet-marker-popup' })
+                .setLatLng([e.sourceTarget._latlng.lat, e.sourceTarget._latlng.lng])
+                .setContent(`${info}`)
+                .openOn(map);
+            }
+          })
+          baseLayers.value[layerName].addLayer(drawList);
+        }
+      }
+      map.addLayer(baseLayers.value[layerName]);
+    _setInBounds(map, MarkersList);
+  }
+
+/**
+ * 轨迹回放
+ * @param map 
+ * @param data 
+ * @param options 
+ * @param manyLineColor 
+ * @returns 
+ */
+  function _trackPlay (map:any, data:any, layerName:string='trackplay',options:any, manyLineColor = ['red', 'blue', 'yellow', 'orange', 'pink']) { //轨迹回放 lineColor多轨迹线条颜色
     if (!map) return;
-    const Options = {
+    let allTargetOptions = Object.assign(trackplayOptions, options);
+   // baseLayers.value 初始化
+    baseLayers.value = baseLayers.value || {};
+    // 使用自定义图层名称
+    baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
+    baseLayers.value[layerName].clearLayers();
+    data.forEach((item, index) => { 
+      let drawList = {}
+      if (!Array.isArray(item)) { //单轨迹画出轨迹  显示里程
+        let latlngs = []
+        for (let p of data) {
+          latlngs.push([p.lat, p.lng]);
+          // 画出起点终点停止点等等
+          _drawTrackPoint(map, data, layerName,allTargetOptions);
+        }
+        if (!allTargetOptions.isDrawLine) {
+          drawList = L.polyline(latlngs, allTargetOptions).addTo(map);
+        }
+
+      } else { //多轨迹画出轨迹  不显示里程
+        let latlngs = []
+        for (let p of item) {
+          latlngs.push([p.lat, p.lng]);
+          // 画出起点终点停止点等等
+          _drawTrackPoint(map, item, layerName,allTargetOptions);
+        }
+        if (!allTargetOptions.isDrawLine) {
+          drawList = L.polyline(latlngs, { ...allTargetOptions, color: manyLineColor[index] ? manyLineColor[index] : 'green' }).addTo(map);
+        }
+      }
+      if (!allTargetOptions.isDrawLine) {
+        baseLayers.value[layerName].addLayer(drawList);
+      }
+    })
+    const trackplay = L.trackplayback(data, map, {
+      targetOptions: { ...allTargetOptions },
       trackLineOptions: {
-        isDraw: true, // 是否画线
+        isDraw: allTargetOptions.isDrawLine, // 是否画线
         stroke: true,
-        color: '#03ff09', // 线条颜色
+        color: allTargetOptions.color, // 线条颜色
         weight: 2, // 线条宽度
         opacity: 1, // 透明度
-        wakeTimeDiff: 100// 尾迹时间控制 不传默认一年
-      },
-      targetOptions: {
-        useImg: true,
-        weight: 1,
-        useImg: true,
-        color: '#03ff09',
-        imgUrl: trackPng,
-        iconSize: [30, 30],
-        iconAnchor: [10, 2],
-        width: 40,
-        height: 40,
-        unit: `km/h`,
-        replayType: false, // false 多个回放 true 单个回放
-        isDir: 1,// 通用图标才有方向变化
-        wakeTimeDiff: 100,
-        isDrawLine: false,
-        showDistance: false,
-        distanceMarkers: {
-          unit: 'km',
-          showAll: 14,
-          isReverse: false,
-          offset: 10000,
-          cssClass: 'hl-line',
-          iconSize: [20, 20]
-        },
-        opacity: 1
+        wakeTimeDiff: allTargetOptions.wakeTimeDiff// 尾迹时间控制 不传默认一年
       }
-    }
-    const trackplayback = L.trackplayback(data, map, Options);
-    console.log('trackplayback:', trackplayback);
-    const trackplaybackControl = L.trackplaybackcontrol(trackplayback);
-    console.log('trackplaybackControl:', trackplaybackControl);
-    // 确保 map._container 可用
-    if (!map._container) {
-      console.error('Map container is not available.');
-      return;
-    }
-    trackplaybackControl.addTo(map);
-    console.log('return');
-    console.log(trackplayback);
-    return trackplayback
+    })
+     L.trackplaybackcontrol(trackplay).addTo(map);
+    return trackplay;
   }
 
 
-  // 开始播放
+  /**
+   * 开始播放
+   */ 
   function _startTrack(trackplay: any) {
     if (!trackplay) {
       return;
     }
-    console.log(trackplay);
     trackplay.start();
   }
+ /**
+  * 设置速度
+  * @param trackplay 
+  * @param speed
+  * @returns 
+  */
+ function _setTrackSpeed (trackplay:any, speed:number) {
+  if (!trackplay) return;
+  trackplay.setSpeed(speed);
+}
+ /**
+  * 设置时间
+  * @param trackplay 
+  * @param time 
+  * @returns 
+  */
+ function _setTrackCurentTime (trackplay:any, time:number) {
+  if (!trackplay) return;
+  trackplay.setCursor(time);
+}
+
+ /**
+   * 销毁轨迹
+   */ 
+ function _disposeTrack(trackplay:any) {
+  if (!trackplay) return;
+  trackplay.dispose();
+}
+
+ /**
+   *刷新
+   */ 
+ function _restartTrack(trackplay:any) {
+  if (!trackplay) return;
+  trackplay.rePlaying();
+}
+
+ /**
+   * 停止
+   */ 
+ function _stopTrack(trackplay:any) {
+  if (!trackplay) return;
+  trackplay.stop();
+}
+
+ /**
+   * 显示轨迹线路
+   */ 
+ function _showTrackLine(trackplay:any) {
+  if (!trackplay) return;
+  trackplay.showTrackLine();
+}
+
+ /**
+   * 隐藏轨迹线路
+   */ 
+ function _hideTrackLine(trackplay:any) {
+  if (!trackplay) return;
+  trackplay.hideTrackLine();
+}
+ /**
+   * 获得当前速度
+   */ 
+function _getCurrentSpeed (trackplay:any) {
+  return trackplay.getSpeed();
+}
+ /**
+   *获得当前时间
+   */ 
+function _getCurrentTime (trackplay:any) {
+  return trackplay.getCurTime();
+}
 
   // 返回可导出的方法和数据
   return {
@@ -826,6 +1041,15 @@ export function useLeafletMap() {
     _drawWindCircle,
     _trackPlay,
     _mearsureArea,
-    _startTrack
+    _startTrack,
+    _setTrackSpeed,
+    _disposeTrack,
+    _restartTrack,
+    _stopTrack,
+    _showTrackLine,
+    _hideTrackLine,
+    _getCurrentSpeed,
+    _getCurrentTime,
+    _setTrackCurentTime
   };
 }

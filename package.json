@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@supermap/iclient-leaflet": "^11.1.1",
-    "leaflet": "^1.9.4",
+    "dayjs": "^1.11.10",
+    "leaflet": "1.7.0",
     "leaflet-canvas-marker": "^0.2.0",
     "leaflet-measure": "^3.1.0",
     "leaflet-plugin-trackplayback": "^1.0.5",
