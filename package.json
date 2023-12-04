@@ -1,12 +1,14 @@
 {
-  "name": "useleaflet",
-  "private": true,
-  "version": "0.0.0",
+  "name": "leaflettools",
+  "version": "1.1.2",
+  "private": false,
+  "description": "帮助解决基本的leaflet使用问题",
+  "main": "./utils/useleaflet.ts",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "lib": "vue-tsc && vite build --target lib --name HL --dest lib ./src/utils/useleaflet.ts"
   },
   "dependencies": {
     "@supermap/iclient-leaflet": "^11.1.1",

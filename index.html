@@ -1,13 +1,370 @@
-<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + Vue + TS</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width initial-scale=1.0">
+  <title>HL demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/leaflettools/lib/HL.umd.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflettools/lib/HL.css">
+  <style>
+    ul {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0;
+      padding: 5px 15px;
+    }
+
+    li {
+      list-style: none;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    li:hover {
+      color: orange;
+    }
+
+    .title {
+      text-align: center;
+      position: absolute;
+      top: 0px;
+      z-index: 1000;
+      left: 30%;
+    }
+
+    .tools {
+      position: fixed;
+      right: 10px;
+      top: 48px;
+      z-index: 1000;
+      width: 185px;
+      line-height: 50px;
+      background-color: #fff;
+      border-radius: 10px;
+      padding-left: 30px;
+    }
+
+    .funcBox {
+      width: 213px;
+      height: 510px;
+      overflow-y: scroll;
+      position: fixed;
+      right: 10px;
+      top: 105px;
+      z-index: 1000;
+      background-color: #fff;
+      color: #646566;
+      text-align: left;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1 class="title">leafletools——项目中leaflet基本绘图操作</h1>
+  <div>
+    <div class="tools">地图工具</div>
+    <div class="funcBox">
+      <ul>
+        <li onclick="point()">数据绘点(聚合点)/清除</li>
+        <li onclick="polyline()"> 数据绘线/清除</li>
+        <li onclick="polygon()">数据绘多边形/清除</li>
+        <li onclick="rectangle()">数据绘矩形/清除</li>
+        <li onclick="circle()">数据绘圆形/清除</li>
+        <li onclick="angleCircle()">绘制台风/清除</li>
+        <li onclick="mearsure()"> 测量距离/清除</li>
+        <li onclick="changeMearsureUnit()">切换测距单位</li>
+        <li onclick="area()">测面积</li>
+        <li onclick="hotMap()"> 绘制热力图/清除</li>
+        <li onclick="clearEdit()">清除正在绘制</li>
+        <li onclick="edit(0)"> 直接绘制多边形/清除</li>
+        <li onclick="edit(1)"> 直接绘制圆形/清除</li>
+        <li onclick="edit(2)"> 直接绘制矩形/清除</li>
+        <li onclick="editMarkerGetData()">直接绘点/清除</li>
+        <li onclick="trackBack()">轨迹回放/清除</li>
+        <li onclick="quitTrack()">轨迹回放开启/暂停</li>
+        <li onclick="showHideTrack()">运动时轨迹画线/取消画线</li>
+        <li onclick="setTrackSpeed(10)">设置轨迹回放速度为10</li>
+        <li onclick="restartTrack()">刷新轨迹回放</li>
+        <li onclick="changeLayers(1)">切换天地图卫星图</li>
+        <li onclick="changeLayers(2)">切换天地图地形图</li>
+        <li onclick="changeLayers(3)">切换天地图街道图</li>
+        <li onclick="changeLayers(4)">切换谷歌卫星图</li>
+        <li onclick="changeLayers(5)">切换谷歌地形图</li>
+        <li onclick="changeLayers(6)">切换谷歌街道图</li>
+        <li onclick="fullScreen()">全屏</li>
+        <li onclick="actMapZoomIO(1)">放大</li>
+        <li onclick="actMapZoomIO(-1)">缩小</li>
+      </ul>
+    </div>
+    <div id="map" style="width:1500px;height:1000px;margin:auto;overflow:hidden;"></div>
+  </div>
+
+  <script>
+    let hl = HL.hlLeaflet();
+    let map = hl._initMap("map", { lat: 24, lon: 110, zoom: 4 }); //初始化map
+    //(1)数据绘点
+    let isPoint = false;
+    function point () {
+      isPoint = !isPoint;
+      if (isPoint) {
+        // 显示内容提前封装在msg中
+        let list = [{ lat: 24, lng: 110, id: 1, showMsg: `点击点显示内容1test` }, { lat: 22, lng: 110, id: 3, showMsg: `点击点显示内容2test` }];
+        hl._renderPoint(map, list, 'layers1', "", true) //true为聚合点
+        hl._renderPoint(map, [{ lat: 25, lng: 110, id: 2, showMsg: `显示内容2-25-110` }], 'layers2')
+        hl._renderPoint(map, [{ lat: 26, lng: 110, id: 2, showMsg: `显示内容2-26-110` }], 'layers2')
+      } else {
+        //清除绘点图层
+        hl._clearLayer(map, 'layers1')
+        hl._clearLayer(map, 'layers2')
+      }
+    }
+    //(2)数据绘线
+    let isPolyline = false;
+    function polyline () {
+      isPolyline = !isPolyline
+      if (isPolyline) {
+        let list = [{ lat: 24, lng: 110 }, { lat: 32, lng: 112 }, { lat: 21, lng: 113 }]
+        hl._drawLineByData(map, list, 'polyline', { color: 'blue', weight: 1, showDistance: true })
+        let list2 = [{ lat: 25, lng: 111 }, { lat: 30, lng: 102 }, { lat: 24, lng: 113 }]
+        hl._drawLineByData(map, list2, 'polyline2', { color: 'red', weight: 1, showDistance: true })
+        hl._drawTips(map, { lat: 24, lng: 110 }, 'tips', { html: 'hello-hhh' });
+      } else {
+        hl._clearLayer(map, 'polyline');
+        hl._clearLayer(map, 'polyline2');
+        hl._clearLayer(map, 'tips');
+      }
+    }
+    //(3)数据绘多边形
+    let isPolygon = false;
+    function polygon () {
+      isPolygon = !isPolygon
+      let list = [[{ lat: 24, lng: 110, showMsg: 'hello' }, { lat: 22, lng: 110 }, { lat: 32, lng: 112 }, { lat: 25, lng: 14 }], [{ lat: 19, lng: 10, showMsg: 'hi' }, { lat: 12, lng: 80 }, { lat: 2, lng: 22 }, { lat: 5, lng: 14 }]]
+      if (isPolygon) {
+        hl._drawByData(map, list, `polygon`, 'polygon', { color: 'green', weight: 1 });
+      } else {
+        hl._clearLayer(map, `polygon`)
+      }
+    }
+    // (4)数据绘矩形
+    let isRectangle = false;
+    function rectangle () {
+      isRectangle = !isRectangle
+      let list = [[{ lat: 24, lng: 110, showMsg: 'hello-rectangle' }, { lat: 24, lng: 121 }, { lat: 30, lng: 121, id: 3 }, { lat: 30, lng: 110, id: 4 }], [{ lat: 14, lng: 90, id: 5, showMsg: 'hi-rectangle' }, { lat: 14, lng: 100, id: 6 }, { lat: 20, lng: 90, id: 7 }, { lat: 20, lng: 100, id: 8 }]]
+      let list2 = [{ lat: 26, lng: 130, showMsg: 'hello222-rectangle' }, { lat: 26, lng: 121 }, { lat: 30, lng: 130 }, { lat: 30, lng: 121 }];
+      if (isRectangle) {
+        hl._drawByData(map, list, `rectangle`, 'rectangle', { color: 'blue', weight: 1 })
+        hl._drawByData(map, list2, `rectangle`, 'rectangle', { color: 'red', weight: 1 })
+      } else {
+        hl._clearLayer(map, `rectangle`)
+      }
+    }
+    // (5)数据绘圆形
+    let isCircle = false;
+    function circle () {
+      isCircle = !isCircle
+      let list = [{ lat: 24, lng: 110, radius: 20000, showMsg: 'circle1' }, { lat: 25, lng: 120, radius: 60000, showMsg: 'circle2' }]
+      if (isCircle) {
+        hl._drawByData(map, list, `circle`, 'circle', { color: 'red', weight: 1 });
+      } else {
+        hl._clearLayer(map, `circle`);
+      }
+    }
+    // (6)绘制角度画圆（台风风圈)
+    let isAngleCircle = false;
+    function angleCircle () {
+      isAngleCircle = !isAngleCircle
+      let list = [{ lat: 25, lng: 110, seRadius: 200, neRadius: 250, swRadius: 180, nwRadius: 170 }, { lat: 15, lng: 100, seRadius: 100, neRadius: 220, swRadius: 130, nwRadius: 140 }]
+      if (isAngleCircle) {
+        hl._drawWindCircle(map, list);
+      } else {
+        hl._clearWindCircle(map)
+      }
+    }
+    //(7)测量距离
+    let isMeasure = false;
+    function mearsure () {
+      isMeasure = !isMeasure;
+      if (isMeasure) {
+        hl._measure(map);
+      } else {
+        hl._clearMeasure(map);
+      }
+    }
+    // (8)切换测量距离单位
+    function changeMearsureUnit () {
+      hl._changeMeasureUnit(map);
+      getMeasureUnit(map);
+    }
+    function getMeasureUnit () {
+      measureUnit = hl._getMeasureUnit(map);
+    }
+    // (9)测量面积
+    function area () {
+      hl._mearsureArea(map);
+      map.on('measurefinish', function (evt) { //监听绘画结束调用函数
+        console.log('测量面积完毕')
+      })
+    }
+    //(10)绘制热力图
+    let isHot = false
+    function hotMap () {
+      let data = [{
+        lat: 35.460756,
+        lng: 119.59847,
+        count: 1
+      }, {
+        lat: 35.560756,
+        lng: 119.69847,
+        count: 19
+      }]
+      let data2 = [{
+        lat: 34.460756,
+        lng: 109.59847,
+        count: 19
+      }, {
+        lat: 31.560756,
+        lng: 112.69847,
+        count: 100
+      }]
+      isHot = !isHot;
+      if (isHot) {
+        hl._drawHeatMap(map, data, 'hot');
+        hl._drawHeatMap(map, data2, 'hot');
+      } else {
+        hl._clearLayer(map, 'hot');
+      }
+    }
+    // (11)清除正在绘制
+    function clearEdit () {
+      hl._clearAllEdit(map);
+    }
+    // (12)直接绘制多边形 (13)直接绘制圆形 (14)直接绘制矩形
+    let isEditPolygon = false;
+    let isEditCircle = false;
+    let isEditRectangle = false;
+    function edit (type) {
+      if (type === 0) { //多边形
+        isEditPolygon = !isEditPolygon;
+        if (isEditPolygon) {
+          //start 初始化监听得到绘制时候经纬度
+          map.on('pm:drawstart', ({ workingLayer }) => {
+            console.log('绘制开始')
+            console.log(workingLayer);
+            // 记录绘制的点得到数据 多边形
+            workingLayer.on('pm:vertexadded', function (e) {
+              console.log(e)
+            });
+          })
+          map.on('pm:drawend', e => {
+            console.log('绘制结束')
+            console.log(e);
+          });
+          map.on('pm:create', e => {
+            console.log('创建完成');
+            console.log(e);
+          });
+          //end 得到绘制时候经纬度
+
+          hl._editMapGetData(map, type);
+
+        } else {
+          hl._clearLayer(map, 'editingLayers');
+        }
+      } else if (type === 1) { //圆形
+        isEditCircle = !isEditCircle;
+        if (isEditCircle) {
+          hl._editMapGetData(map, type);
+        } else {
+          hl._clearLayer(map, 'editingLayers');
+        }
+      } else { //矩形
+        isEditRectangle = !isEditRectangle;
+        if (isEditRectangle) {
+          hl._editMapGetData(map, type);
+        } else {
+          hl._clearLayer(map, 'editingLayers');
+        }
+      }
+    }
+    // (15)直接绘点
+    let iseditMarkerGetData = false;
+    function editMarkerGetData () {
+      iseditMarkerGetData = !iseditMarkerGetData;
+      if (iseditMarkerGetData) {
+        hl._editMarkerGetData(map);
+      } else {//  清除Maker
+        hl._clearLayer(map, 'editingMarker');
+      }
+    }
+    // (16)轨迹回放
+    let isTrackBack = false;
+    function trackBack () {
+      isTrackBack = !isTrackBack;
+      if (isTrackBack) {
+        let testData = [
+          [
+            { "lng": 133.78486666666666, "lat": 34.34605, "time": 1676458023, "speed": 122, "dir": 61.8, "heading": 62, "point": 1, "info": [], gDeviceStatus: 3 },
+            { "lng": 134.98611666666667, "lat": 33.88173333333334, "speed": 124, "point": 3, "time": 1676459023, "dir": 142.7, "heading": 139, "info": [], gDeviceStatus: 4 }
+          ],
+          [
+            { "lng": 130.78486666666666, "lat": 31.34605, "time": 1676458023, "speed": 132, "dir": 61.8, "heading": 62, "point": 1, "info": [], gDeviceStatus: 3 },
+            { "lng": 136.98611666666667, "lat": 32.88173333333334, "speed": 134, "point": 3, "time": 1676459023, "dir": 142.7, "heading": 139, "info": [], gDeviceStatus: 4 }
+          ]
+        ]
+        trackplay = hl._trackPlay(map, testData, { isDrawLine: false });
+      } else {//  清除轨迹
+        hl._clearTrackBack(map, trackplay);
+      }
+    }
+    // (17)暂停轨迹回放
+    let isStop = true;
+    function quitTrack () {
+      isStop = !isStop;
+      if (isStop) {
+        hl._quitTrack(trackplay);
+      } else {
+        hl._startTrack(trackplay);
+      }
+    }
+    // (18)运动时轨迹画线
+    let isShowTrackLine = false;
+    function showHideTrack () {
+      isShowTrackLine = !isShowTrackLine;
+      if (isShowTrackLine) {
+        hl._showTrackLine(trackplay);
+      } else {
+        hl._hideTrackLine(trackplay);
+      }
+    }
+    // (19)设置轨迹回放速度为10
+    function setSpeed (speed) {
+      hl._setTrackSpeed(speed);
+    }
+    // (20)刷新轨迹回放
+    function restartTrack () {
+      hl._restartTrack(trackplay);
+    }
+    // (21)切换图层
+    function changeLayers (idx) {
+      hl._changeLayers(map, idx);
+    }
+
+    // (27)全屏
+    function fullScreen () {
+      hl._fullScreen(map);
+    }
+    // (28)放大(29)缩小
+    function actMapZoomIO (key) {
+      if (key > 0) {
+        hl._zoomAdd(map)
+      } else if (key < 0) {
+        hl._zoomSub(map)
+      }
+    }
+
+  </script>
+</body>
+
 </html>

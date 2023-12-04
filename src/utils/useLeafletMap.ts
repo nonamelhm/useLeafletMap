@@ -876,10 +876,7 @@ async function _drawSuperMarkers(map:any, MarkersList:any[], isdrawLabel:string,
      baseLayers.value = baseLayers.value || {};
      // 使用自定义图层名称
      baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
-      let graphics = []
       let image
-      let style = {}
-       
       for (let i = 0; i < MarkersList.length; ++i) {
         let drawList = {}
         let info = ''
