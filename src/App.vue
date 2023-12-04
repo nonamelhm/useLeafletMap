@@ -6,11 +6,12 @@ import {control} from "leaflet";
 import layers = control.layers; // 请根据你的文件路径正确导入
 const {
   trackplayback,
+  clickSuperMarker,
   _initMap,
   _changeLayer,
   _fullScreen,
-  _renderPoint,
-  _editLayer,
+  _drawSuperMarkers,
+  _drawMarkers,
   _clearLayer,
   _clearAllEdit,
   _setZoomSmaller,
@@ -48,8 +49,8 @@ const drawPoint = () => {
     dir:135,
     showMsg: `hello2`
   }];
-  _renderPoint(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
-  _renderPoint(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
+  _drawMarkers(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
+  _drawMarkers(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
 }
 // 测量单位
 const mearsureDistanceUnit = ref<string>('千米');
@@ -61,16 +62,12 @@ const drawShapes = () => {
   _drawByData(map.value, [
     {
       type: 'circle',
-      lat: 23.505,
-      lng: 113.57,
-      radius: 10000,
+      coordinates: [  {  lat: 23.505,lng: 113.57,radius: 10000}],
       info: 'Circle 1',
     },
     {
       type: 'circle',
-      lat: 24.505,
-      lng: 112.57,
-      radius: 2000,
+      coordinates: [{  lat: 24.505, lng: 112.57,radius: 2000}],
       info: 'Circle 2',
     },
     {
@@ -184,11 +181,22 @@ const clearTrack = ()=>{
   _clearLayer(map.value,'trackplay')
   
 }
+// 绘制高性能点
+const drawSuperMarker = ()=>{
+  _drawSuperMarkers(map.value,[{latitude:23,longitude:112,icon:'https://oss.irim.online/eim/icon/dir1.png',status:1,direction:25,nickName:'l1',username:'l1_user'},{latitude:23,longitude:116,icon:'https://oss.irim.online/eim/icon/dir2.png',status:2,dir:55,nickName:'l2',username:'l2_user'},{latitude:22,longitude:119,icon:'https://oss.irim.online/eim/icon/dir0.png',status:0,direction:175,nickName:'l3',username:'l3_user'},{latitude:28,longitude:112,icon:'https://oss.irim.online/eim/icon/dir1.png',status:1,direction:25,nickName:'l4',username:'l4_user'},{latitude:22,longitude:115,icon:'https://oss.irim.online/eim/icon/dir3.png',status:3,direction:175,nickName:'深南7289',username:'深——user'}],'showLabel','super')
+}
+const clearSuperMarker=()=>{
+  _clearLayer(map.value,'super')
+}
+watch(()=>clickSuperMarker,()=>{
+  console.log('当前点击的信息---',clickSuperMarker)
+})
+
 </script>
 <template>
   <div id="app">
     <!-- 在模板中创建一个容器用于地图 -->
-    <div id="mapContainer" style="height: 500px;width:500px;"></div>
+    <div id="mapContainer" style="height: 500px;width:1000px;"></div>
 
     <!-- 添加按钮来切换地图图层 -->
     <button @click="_changeLayer(map,'空白')">切换到空白地图</button>
@@ -203,6 +211,9 @@ const clearTrack = ()=>{
     <button @click="clearLayer(map,'layers1')">清除图层1</button>
     <button @click="_setZoomSmaller(map)">缩小</button>
     <button @click="_setZoomBigger(map)">放大</button>
+    <button @click="drawSuperMarker">绘制高性能点</button>
+    <button @click="clearSuperMarker">清除高性能点</button>
+    <button>当前点击高性能点:{{ clickSuperMarker?clickSuperMarker.nickName:'--' }}</button>
     <button @click="drawShapes">绘制图形</button>
     <button @click="_clearLayer(map,'layers3')">清除图形</button>
     <button @click="_mearsureDistance(map)">测距</button>

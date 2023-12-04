@@ -4,7 +4,7 @@
  */
 import {ref} from 'vue';
 import 'leaflet/dist/leaflet.css';
-import '../assets/css/hlLeaflet.css';// 自定义样式 聚合点测、面积
+// import '../assets/css/hlLeaflet.css';// 自定义样式 聚合点测、面积
 import * as L from 'leaflet';
 // 测距 https://github.com/ppete2/Leaflet.PolylineMeasure
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.css";
@@ -38,6 +38,8 @@ import 'leaflet.heat/dist/leaflet-heat.js';
 // 直接绘制图形 https://www.npmjs.com/package/@seated/leaflet.pm
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm';
+// 高性能marker点 根据状态绘制marker
+import '../assets/js/superMap/iclient-leaflet';
 
 // 轨迹回放 https://linghuam.github.io/Leaflet.TrackPlayBack/   https://github.com/linghuam/Leaflet.TrackPlayBack
 // import 'leaflet-plugin-trackplayback/dist/control.playback.css';
@@ -72,6 +74,8 @@ export function useLeafletMap() {
   const baseLayers = ref<any>({}); // 存储图层数据
   const selectedLayer = ref<string>('天地图街道'); // 选中的图层
   const trackplayback = ref<any>(null);
+  const superMapMonitorMarkers = ref<any>(null);
+  const clickSuperMarker = ref<any>(null);
   // 地图初始化基本配置
   const initMapOptions = {
     lat: 23.1538555,
@@ -93,12 +97,7 @@ export function useLeafletMap() {
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     disableClusteringAtZoom: 16,
-    maxClusterRadius: 60,
-    iconCreateFunction: function (cluster:any) {
-      let tempcount = cluster.getChildCount()
-      let tempclass = tempcount > 500 ? 'red' : tempcount > 200 ? 'blue2' : tempcount > 100 ? 'blue' : tempcount > 50 ? 'green2' : 'green'
-      return L.divIcon({ html: '<b class="' + tempclass + '">' + cluster.getChildCount() + '</b>' });
-    }
+    maxClusterRadius: 60
   }
   // 默认绘制台风风圈配置
   const windCircleOptions = {
@@ -245,6 +244,95 @@ export function useLeafletMap() {
     //全屏切换
     map.toggleFullscreen();
   }
+// 全局图片对象列表
+const pointsImageObjectList = {};
+
+/**
+ * 异步加载图片
+ * @param {string} imageUrl 图像URL
+ * @returns Promise<Image>
+ */
+const loadImage = (imageUrl:string) => {
+  return new Promise((resolve, reject) => {
+    if (pointsImageObjectList[imageUrl]) {
+      // 图片已经加载过，直接返回
+      resolve(pointsImageObjectList[imageUrl]);
+    } else {
+      // 创建新的 Image 对象
+      const image = new Image();
+      image.onload = () => {
+        pointsImageObjectList[imageUrl] = image;
+        resolve(image);
+      };
+      image.onerror = (error) => reject(error);
+      image.src = imageUrl;
+    }
+  });
+};
+
+/**
+ * 实时监控
+ * 生成高性能标注点
+ * @param map 地图对象
+ * @param MarkersList 标注点列表
+ * @param isdrawLabel 是否显示标签 showLabel显示标签 hideLabel隐藏标签
+ */
+async function _drawSuperMarkers(map:any, MarkersList:any[], isdrawLabel:string,layerName='superMarkerLayer') {
+  if (!map) {
+    return;
+  }
+
+  try {
+      // 确保 baseLayers.value 初始化
+      baseLayers.value = baseLayers.value || {};
+
+      baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
+      baseLayers.value[layerName].clearLayers();
+  
+    // 预加载图像
+    const images = MarkersList.map(marker => marker.icon);
+    await Promise.all(images.map(loadImage));
+
+    // 图像加载成功后，创建标记点
+    let graphics = [];
+    for (let i = 0; i < MarkersList.length; i++) {
+      const marker = MarkersList[i];
+      if (marker && (marker.longitude && marker.latitude)) {
+        const imageUrl = marker.icon;
+        const imageObject = pointsImageObjectList[imageUrl];
+
+        let style = {
+          img: imageObject, // 直接传递 Image 对象
+          size: [40, 40],
+          anchor: [20, 20],
+          dir: marker.direction ? marker.direction : 0,
+        };
+
+        style.userInfo = marker;
+        style.id = marker.id;
+        style.isdrawLabel = isdrawLabel;
+
+        graphics.push(L.supermap.graphic({
+          latLng: L.latLng(marker.latitude, marker.longitude),
+          style: style,
+          attributes: [marker.nickName],
+          id: marker.id,
+        }));
+      }
+    }
+
+    // 将标记点添加到地图
+    superMapMonitorMarkers.value = L.supermap.graphicLayer(graphics, {
+      render: 'canvas',
+      onClick: function (graphic, evt) {
+        clickSuperMarker.value = graphic._style.userInfo
+      },
+    }).addTo(map);
+    baseLayers.value[layerName].addLayer(superMapMonitorMarkers.value);
+  } catch (error) {
+    console.error('加载图片时出错：', error);
+  }
+}
 
   /** 绘制多个点并添加到图层
    * @param map 绘制的地图
@@ -252,12 +340,12 @@ export function useLeafletMap() {
    * @param layerName 图层名称
    * @param options 绘制图层基本配置项
    */
-  function _renderPoint(map: any, points: Array<{
+  function _drawMarkers(map: any, points: Array<{
     lat: number;
     lng: number;
     dir: number;
     showMsg: string
-  }>, layerName: string, options: any, isCluster: boolean = false, isShow: boolean = true) {
+  }>, layerName: string, options: any, isCluster: boolean = false,isShow:boolean=true) {
     if (!map || !Array.isArray(points) || points.length === 0) return;
     let allOptions = Object.assign(pointOptions, options);
     // 确保 baseLayers.value 初始化
@@ -276,14 +364,14 @@ export function useLeafletMap() {
       const marker = L.marker([lat, lng], {
         icon: myIcon,
         rotationAngle: dir
-      }).bindPopup(showMsg, {closeButton: false,className:'hl-pop-msg-box'}).addTo(baseLayers.value[layerName])
-      if (isShow) {
-        marker.openPopup(); // 自动显示 popup
+      }).bindPopup(showMsg, allOptions).addTo(baseLayers.value[layerName])
+      if(isShow){
+        marker.openPopup();
       }else{
-        marker.closePopup(); // 自动显示 popup
+        marker.closePopup();
       }
-
     });
+ 
     // 将图层添加到地图，并使用 layerName 作为图层标识
     baseLayers.value[layerName].addTo(map);
   }
@@ -353,7 +441,7 @@ export function useLeafletMap() {
       const {type, coordinates, info} = shapeData;
       if (type === 'circle') {
         // 处理圆形
-        const {lat, lng, radius} = shapeData;
+        const {lat, lng, radius} = coordinates[0];
         const circleLayer = L.circle([lat, lng], {radius}).bindPopup(info);
         circleLayer.addTo(baseLayers.value[layerName]);
         allLatlngs.push([lat, lng]);
@@ -1014,6 +1102,8 @@ function _getCurrentTime (trackplay:any) {
   return {
     map,
     mouseLatLng,
+    clickSuperMarker,
+    superMapMonitorMarkers,
     baseLayers,
     selectedLayer,
     drawLatlngs,
@@ -1022,7 +1112,8 @@ function _getCurrentTime (trackplay:any) {
     _initMap,
     _changeLayer,
     _fullScreen,
-    _renderPoint,
+    _drawSuperMarkers,
+    _drawMarkers,
     _clearLayer,
     _setZoomBigger,
     _setZoomSmaller,
