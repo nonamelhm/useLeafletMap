@@ -4,7 +4,6 @@
  */
 import {ref} from 'vue';
 import 'leaflet/dist/leaflet.css';
-// import '../assets/css/hlLeaflet.css';// 自定义样式 聚合点测、面积
 import * as L from 'leaflet';
 // 测距 https://github.com/ppete2/Leaflet.PolylineMeasure
 import "leaflet.polylinemeasure/Leaflet.PolylineMeasure.css";
@@ -28,9 +27,8 @@ import "leaflet.markercluster/dist/leaflet.markercluster.js";
 import 'leaflet-rotatedmarker';
 // leaflet-canvas-marker Marker  https://www.npmjs.com/package/leaflet-canvas-marker  TODO待成功引入
 import 'leaflet-canvas-marker';
-
 // 默认图标
-import myIconUrl from '../assets/vue.svg';
+import myIconUrl from '../assets/images/leaflet_icon/vue.svg';
 // 台风 https://github.com/jieter/Leaflet-semicircle
 import 'leaflet-semicircle';
 // 热力图 https://github.com/Leaflet/Leaflet.heat
@@ -341,10 +339,11 @@ async function _drawSuperMarkers(map:any, MarkersList:any[], isdrawLabel:string,
    * @param options 绘制图层基本配置项
    */
   function _drawMarkers(map: any, points: Array<{
-    lat: number;
-    lng: number;
-    dir: number;
-    showMsg: string
+    latitude: number;
+    longitude: number;
+    direction: number;
+    description: string;
+    iconUrl: string
   }>, layerName: string, options: any, isCluster: boolean = false,isShow:boolean=true) {
     if (!map || !Array.isArray(points) || points.length === 0) return;
     let allOptions = Object.assign(pointOptions, options);
@@ -356,15 +355,15 @@ async function _drawSuperMarkers(map:any, MarkersList:any[], isdrawLabel:string,
       baseLayers.value[layerName] = baseLayers.value[layerName] || L.layerGroup().addTo(map);
       baseLayers.value[layerName].clearLayers();
     }
-    // 自定义图标
-    let myIcon = L.icon(allOptions);
-
+ 
     points.forEach(point => {
-      const {lat, lng, showMsg, dir} = point;
-      const marker = L.marker([lat, lng], {
+         // 自定义图标
+      const {latitude, longitude, description, direction, iconUrl} = point;
+      const myIcon = L.icon({...allOptions,iconUrl});
+      const marker = L.marker([latitude, longitude], {
         icon: myIcon,
-        rotationAngle: dir
-      }).bindPopup(showMsg, allOptions).addTo(baseLayers.value[layerName])
+        rotationAngle: direction
+      }).bindPopup(description, allOptions).addTo(baseLayers.value[layerName])
       if(isShow){
         marker.openPopup();
       }else{

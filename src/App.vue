@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import myIconUrl from '../src/assets/vue.svg';
 import {nextTick, onMounted, ref, watch} from 'vue';
 import {useLeafletMap} from './utils/useLeafletMap.ts';
 import {control} from "leaflet";
@@ -42,15 +41,16 @@ onMounted(() => {
   })
 })
 const drawPoint = () => {
-  let list = [{lat: 24, lng: 110, id: 1,dir:50, showMsg: `hello1`}, {
-    lat: 22,
-    lng: 110,
+  let list = [{latitude: 24, longitude: 110, id: 1,direction:50, iconUrl:'https://oss.irim.online/eim/icon/mark/icon2.png', description: `hello1`}, {
+    latitude: 22,
+    longitude: 110,
+    iconUrl:'https://oss.irim.online/eim/icon/mark/icon1.png',
     id: 3,
-    dir:135,
-    showMsg: `hello2`
+    direction:135,
+    description: `hello2`
   }];
-  _drawMarkers(map.value, list, 'layers1', {iconUrl: myIconUrl}, true,false);
-  _drawMarkers(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
+  _drawMarkers(map.value, list, 'layers1', {}, true,false);
+  // _drawMarkers(map.value, [{lat: 25, lng: 110, id: 2, dir:45,showMsg: `<div style="background-color:pink;">图层2<br/>点1</div>`}], 'layers2',{iconAnchor:[10,0]},false,true);
 }
 // 测量单位
 const mearsureDistanceUnit = ref<string>('千米');
